@@ -40,7 +40,7 @@ SLACK_MESSAGE_CONTENT="{
             \"type\": \"section\",
             \"text\": {
                 \"type\": \"mrkdwn\",
-                \"text\": \"Uh oh... $2 is failing for *$1*:\"
+                \"text\": \"Uh oh... $2 failing for *$1*:\"
             }
         },
         {
