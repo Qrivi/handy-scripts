@@ -9,12 +9,22 @@
 REPO_ROOT=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
 cd "$REPO_ROOT" || exit 1
 
+# Create files for output
+echo "[no output]" > "$REPO_ROOT/stdout.log"
+echo "[no output]" > "$REPO_ROOT/stderr.log"
+
 # Execute the command that was passed
-if eval "$3" > "$REPO_ROOT/cicd.log" 2>&1; then
+if eval "$3" > "$REPO_ROOT/stdout.log" 2> "$REPO_ROOT/stderr.log"; then
     echo "$2 ran successfully!" && exit 0 # If ok the journey ends here.
 else
     echo "$2 failed!"
 fi
+
+# Truncate files if necessary (Slack is max 3000 chars per code block)
+cat "$REPO_ROOT/stdout.log" | tail -c 2969 > "$REPO_ROOT/stdout.tmp"
+rm "$REPO_ROOT/stdout.log" && mv "$REPO_ROOT/stdout.tmp" "$REPO_ROOT/stdout.log"
+cat "$REPO_ROOT/stderr.log" | tail -c 2969 > "$REPO_ROOT/stderr.tmp"
+rm "$REPO_ROOT/stderr.log" && mv "$REPO_ROOT/stderr.tmp" "$REPO_ROOT/stderr.log"
 
 # Set some easily accessible variables for our Slack message.
 REPO_REMOTE_NAME=$(if [ -n "$BITBUCKET_BUILD_NUMBER" ]; then echo Bitbucket; elif [ -n "$GITHUB_RUN_NUMBER" ]; then echo GitHub; else echo Unknown; fi)
@@ -37,7 +47,14 @@ SLACK_MESSAGE_CONTENT="{
             \"type\": \"section\",
             \"text\": {
                 \"type\": \"mrkdwn\",
-                \"text\": \"\`\`\`$(jq -Rs < "$REPO_ROOT/cicd.log" | sed 's/^"\(.*\)"$/\1/')\`\`\`\"
+                \"text\": \"*stdout*\n\`\`\`$(jq -Rs < "$REPO_ROOT/stdout.log" | sed 's/^"\(.*\)"$/\1/')\`\`\`\"
+            }
+        },
+        {
+            \"type\": \"section\",
+            \"text\": {
+                \"type\": \"mrkdwn\",
+                \"text\": \"*stderr*\n\`\`\`$(jq -Rs < "$REPO_ROOT/stderr.log" | sed 's/^"\(.*\)"$/\1/')\`\`\`\"
             }
         },
         {
@@ -69,7 +86,8 @@ SLACK_MESSAGE_CONTENT="{
 }"
 
 # Clean up after ourselves.
-rm "$REPO_ROOT/cicd.log"
+rm "$REPO_ROOT/stdout.log"
+rm "$REPO_ROOT/stderr.log"
 
 if [ -n "$SLACK_WEBHOOK_URL" ]; then
     # Send it.
