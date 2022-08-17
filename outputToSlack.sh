@@ -10,7 +10,7 @@ REPO_ROOT=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
 cd "$REPO_ROOT" || exit 1
 
 # Execute the command that was passed
-if eval "$3" > "$REPO_ROOT/cicd.log"; then
+if eval "$3" > "$REPO_ROOT/cicd.log" 2>&1; then
     echo "$2 ran successfully!" && exit 0 # If ok the journey ends here.
 else
     echo "$2 failed!"
